@@ -1,0 +1,600 @@
+<template>
+    <div class="app-shell">
+ 
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <lightning-icon icon-name="utility:world" size="small" class="sidebar-brand-icon"></lightning-icon>
+                <div>
+                    <p class="sidebar-brand-title">{cardTitle}</p>
+                    <p class="sidebar-brand-sub">Split dashboard</p>
+                </div>
+            </div>
+ 
+            <p class="sidebar-section-label">Trips</p>
+            <template if:true={hasTrips}>
+                <div class="sidebar-trip-list">
+                    <template for:each={decoratedTrips} for:item="trip">
+                        <div
+                            key={trip.Id}
+                            class={trip.sidebarClass}
+                            data-id={trip.Id}
+                            onclick={handleTripSelect}
+                        >
+                            <span class="sidebar-trip-dot"></span>
+                            <span class="sidebar-trip-name">{trip.Name}</span>
+                            <span class="sidebar-trip-status">{trip.rajuser2003__Status__c}</span>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template if:false={hasTrips}>
+                <p class="sidebar-empty">No trips yet</p>
+            </template>
+ 
+            <lightning-button
+                variant="brand"
+                label="New Trip"
+                icon-name="utility:add"
+                onclick={openNewTripModal}
+                class="sidebar-new-trip-btn"
+            ></lightning-button>
+        </aside>
+ 
+        <!-- ===================== MAIN AREA ===================== -->
+        <div class="main-area">
+ 
+            <!-- ---------- TOPBAR ---------- -->
+            <div class="topbar">
+                <div class="topbar-search">
+                    <lightning-icon icon-name="utility:search" size="xx-small" class="topbar-search-icon"></lightning-icon>
+                    <lightning-input
+                        type="search"
+                        variant="label-hidden"
+                        placeholder="Search members or expenses..."
+                        value={searchTerm}
+                        onchange={handleSearchChange}
+                        class="topbar-search-input"
+                    ></lightning-input>
+                </div>
+                <template if:true={hasSelectedTrip}>
+                    <div class="topbar-total-pill">
+                        <span class="topbar-total-label">Total spent</span>
+                        <span class="topbar-total-value">{totalExpensesFormatted}</span>
+                    </div>
+                </template>
+            </div>
+ 
+            <div class="content-scroll">
+                <template if:true={isLoading}>
+                    <lightning-spinner alternative-text="Loading" size="small" class="dash-spinner"></lightning-spinner>
+                </template>
+ 
+                <template if:false={hasTrips}>
+                    <div class="empty-state">
+                        <div class="empty-icon">🧳</div>
+                        <h2>No trips yet</h2>
+                        <p>Create your first trip to start tracking shared expenses.</p>
+                        <lightning-button variant="brand" label="Create Trip" onclick={openNewTripModal}></lightning-button>
+                    </div>
+                </template>
+ 
+                <!-- ===================== SPLIT BODY ===================== -->
+                <template if:true={hasSelectedTrip}>
+                    <div class="trip-title-row">
+                        <h2 class="trip-name">{selectedTripName}</h2>
+                        <span class="trip-meta">{selectedTripStatus} · {selectedTripDates}</span>
+                    </div>
+ 
+                    <div class="stat-grid">
+                        <div class="stat-card stat-card-blue">
+                            <lightning-icon icon-name="utility:groups" size="small" class="stat-icon"></lightning-icon>
+                            <div class="stat-text">
+                                <span class="stat-label">Members</span>
+                                <span class="stat-value">{memberCount}</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-purple">
+                            <lightning-icon icon-name="utility:money" size="small" class="stat-icon"></lightning-icon>
+                            <div class="stat-text">
+                                <span class="stat-label">Total spent</span>
+                                <span class="stat-value">{totalExpensesFormatted}</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-amber">
+                            <lightning-icon icon-name="utility:flag" size="small" class="stat-icon"></lightning-icon>
+                            <div class="stat-text">
+                                <span class="stat-label">Status</span>
+                                <span class="stat-value">{selectedTripStatus}</span>
+                            </div>
+                        </div>
+                    </div>
+ 
+                    <lightning-tabset variant="default" class="dash-tabset">
+ 
+                        <!-- ===================== TAB: OVERVIEW ===================== -->
+                        <lightning-tab label="Overview" icon-name="utility:layers">
+                            <div class="split-body">
+ 
+                                <!-- ---------- LEFT PANEL : MEMBERS ---------- -->
+                                <div class="left-panel">
+                                    <div class="panel-header">
+                                        <h3><lightning-icon icon-name="utility:groups" size="xx-small" class="panel-header-icon"></lightning-icon>Members</h3>
+                                        <lightning-button-icon
+                                            icon-name="utility:add"
+                                            variant="brand"
+                                            alternative-text="Add Member"
+                                            title="Add Member"
+                                            onclick={openAddMemberModal}
+                                        ></lightning-button-icon>
+                                    </div>
+ 
+                                    <template if:true={hasFilteredMembers}>
+                                        <div class="member-list">
+                                            <template for:each={filteredMembers} for:item="member">
+                                                <div key={member.Id} class={member.cardClass}>
+                                                <div class={member.avatarClass}>{member.initials}</div>
+                                                    <div class="member-info">
+                                                        <div class="member-name">{member.rajuser2003__MemberName__c}</div>
+                                                        <div class="member-sub">
+                                                            Paid {member.formattedPaid} · Share {member.formattedShare}
+                                                        </div>
+                                                    </div>
+                                                    <div class="member-balance">
+                                                        <span class={member.balanceClass}>{member.formattedBalance}</span>
+                                                        <span class="balance-status">{member.balanceStatus}</span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasFilteredMembers}>
+                                        <div class="empty-inline">
+                                            <lightning-icon icon-name="utility:groups" size="small" class="empty-inline-icon"></lightning-icon>
+                                            <p>No members found.</p>
+                                        </div>
+                                    </template>
+                                </div>
+ 
+                                <!-- ---------- RIGHT PANEL : EXPENSES ---------- -->
+                                <div class="right-panel">
+                                    <div class="panel-header">
+                                        <h3><lightning-icon icon-name="utility:money" size="xx-small" class="panel-header-icon"></lightning-icon>Expenses</h3>
+                                        <lightning-button
+                                            variant="brand"
+                                            label="Add Expense"
+                                            icon-name="utility:add"
+                                            onclick={openAddExpenseModal}
+                                        ></lightning-button>
+                                    </div>
+ 
+                                    <template if:true={hasFilteredExpenses}>
+                                        <div class="expense-list">
+                                            <template for:each={filteredExpenses} for:item="exp">
+                                                <div
+                                                    key={exp.Id}
+                                                    class={exp.cardClass}
+                                                    data-id={exp.Id}
+                                                    onclick={openExpenseDetail}
+                                                >
+                                                    <div class={exp.categoryColorClass}>
+                                                        <lightning-icon icon-name={exp.categoryIcon} size="xx-small"></lightning-icon>
+                                                    </div>
+                                                    <div class="expense-main">
+                                                        <div class="expense-name">{exp.Name}</div>
+                                                        <div class="expense-meta">
+                                                            {exp.rajuser2003__Category__c} · Paid by {exp.paidByName} · {exp.rajuser2003__Expensesdate__c}
+                                                        </div>
+                                                    </div>
+                                                    <div class="expense-amount">{exp.formattedAmount}</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasFilteredExpenses}>
+                                        <div class="empty-inline">
+                                            <lightning-icon icon-name="utility:money" size="small" class="empty-inline-icon"></lightning-icon>
+                                            <p>No expenses found.</p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </lightning-tab>
+ 
+                        <!-- ===================== TAB: SETTLE UP ===================== -->
+                        <lightning-tab label="Settle Up" icon-name="utility:currency">
+                            <div class="settle-panel">
+                                <template if:true={hasSettleUpTransactions}>
+                                    <p class="settle-intro">
+                                        The fewest possible payments to settle every balance in this trip:
+                                    </p>
+                                    <div class="settle-list">
+                                        <template for:each={settleUpTransactions} for:item="t">
+                                            <div key={t.id} class="settle-row fade-in-item">
+                                                <div class="settle-avatar settle-avatar-owes">{t.fromInitials}</div>
+                                                <div class="settle-flow">
+                                                    <span class="settle-name">{t.fromName}</span>
+                                                    <lightning-icon icon-name="utility:right" size="xx-small" class="settle-arrow"></lightning-icon>
+                                                    <span class="settle-name">{t.toName}</span>
+                                                </div>
+                                                <div class="settle-avatar settle-avatar-gets">{t.toInitials}</div>
+                                                <div class="settle-amount">{t.amount}</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template if:false={hasSettleUpTransactions}>
+                                    <div class="empty-inline">
+                                        <lightning-icon icon-name="utility:success" size="small" class="empty-inline-icon empty-inline-success"></lightning-icon>
+                                        <p>Everyone is settled up — no payments needed.</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-tab>
+ 
+                        <!-- ===================== TAB: INSIGHTS ===================== -->
+                        <lightning-tab label="Insights" icon-name="utility:chart">
+                            <div class="chart-card">
+                                <template if:true={hasCategoryBreakdown}>
+                                    <div class="insights-grid">
+                                        <div class="donut-block">
+                                            <div class="donut-ring" style={donutStyle}>
+                                                <div class="donut-hole">
+                                                    <span class="donut-hole-label">Total</span>
+                                                    <span class="donut-hole-value">{totalExpensesFormatted}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="legend-block">
+                                            <template for:each={categoryBreakdown} for:item="c">
+                                                <div key={c.category} class="legend-row fade-in-item">
+                                                    <span class={c.dotClass}></span>
+                                                    <span class="legend-name">{c.category}</span>
+                                                    <span class="legend-value">{c.formattedAmount}</span>
+                                                    <span class="legend-pct">{c.pct}%</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+ 
+                                    <h3 class="chart-title">Spend by Category</h3>
+                                    <div class="chart-rows">
+                                        <template for:each={categoryBreakdown} for:item="c">
+                                            <div key={c.category} class="chart-row fade-in-item">
+                                                <div class="chart-label">
+                                                    <lightning-icon icon-name={c.icon} size="xx-small" class="chart-icon"></lightning-icon>
+                                                    <span>{c.category}</span>
+                                                </div>
+                                                <div class="chart-bar-track">
+                                                    <div class="chart-bar-fill" style={c.barStyle}></div>
+                                                </div>
+                                                <div class="chart-value">{c.formattedAmount} · {c.pct}%</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template if:false={hasCategoryBreakdown}>
+                                    <div class="empty-inline">
+                                        <lightning-icon icon-name="utility:chart" size="small" class="empty-inline-icon"></lightning-icon>
+                                        <p>Add expenses to see spend insights.</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </lightning-tab>
+                    </lightning-tabset>
+                </template>
+            </div>
+        </div>
+ 
+        <!-- ===================== MODAL: NEW TRIP ===================== -->
+        <template if:true={showNewTripModal}>
+            <section class="slds-modal slds-fade-in-open modal-visible" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-modal__title">Create New Trip</h2>
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            class="slds-modal__close"
+                            variant="bare-inverse"
+                            alternative-text="Close"
+                            onclick={closeNewTripModal}
+                        ></lightning-button-icon>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <lightning-input
+                            label="Trip Name"
+                            data-field="name"
+                            value={newTrip.name}
+                            onchange={handleNewTripField}
+                            required
+                        ></lightning-input>
+                        <lightning-input
+                            type="date"
+                            label="Start Date"
+                            data-field="startDate"
+                            value={newTrip.startDate}
+                            onchange={handleNewTripField}
+                            class="slds-m-top_small"
+                        ></lightning-input>
+                        <lightning-input
+                            type="date"
+                            label="End Date"
+                            data-field="endDate"
+                            value={newTrip.endDate}
+                            onchange={handleNewTripField}
+                            class="slds-m-top_small"
+                        ></lightning-input>
+                        <lightning-combobox
+                            label="Status"
+                            data-field="status"
+                            value={newTrip.status}
+                            options={statusOptions}
+                            onchange={handleNewTripField}
+                            class="slds-m-top_small"
+                        ></lightning-combobox>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={closeNewTripModal}></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Save Trip"
+                            onclick={saveNewTrip}
+                            class="slds-m-left_x-small"
+                        ></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+ 
+        <!-- ===================== MODAL: ADD MEMBER ===================== -->
+        <template if:true={showAddMemberModal}>
+            <section class="slds-modal slds-fade-in-open modal-visible" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-modal__title">Add Trip Member</h2>
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            class="slds-modal__close"
+                            variant="bare-inverse"
+                            alternative-text="Close"
+                            onclick={closeAddMemberModal}
+                        ></lightning-button-icon>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <lightning-input
+                            label="Member Name"
+                            value={newMember.name}
+                            onchange={handleMemberNameChange}
+                            required
+                        ></lightning-input>
+ 
+                        <div class="slds-m-top_small">
+                            <lightning-input
+                                label="Link to Contact (optional)"
+                                placeholder="Search contacts..."
+                                onchange={handleContactSearch}
+                            ></lightning-input>
+                            <template if:true={newMember.contactName}>
+                                <div class="selected-contact-chip">
+                                    Linked: {newMember.contactName}
+                                    <lightning-button-icon
+                                        icon-name="utility:close"
+                                        variant="bare"
+                                        alternative-text="Remove"
+                                        onclick={clearSelectedContact}
+                                    ></lightning-button-icon>
+                                </div>
+                            </template>
+                            <template if:true={contactResults.length}>
+                                <ul class="contact-results">
+                                    <template for:each={contactResults} for:item="c">
+                                        <li
+                                            key={c.Id}
+                                            data-id={c.Id}
+                                            data-name={c.Name}
+                                            onclick={selectContact}
+                                        >
+                                            {c.Name}
+                                        </li>
+                                    </template>
+                                </ul>
+                            </template>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={closeAddMemberModal}></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Add Member"
+                            onclick={saveNewMember}
+                            class="slds-m-left_x-small"
+                        ></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+ 
+        <!-- ===================== MODAL: ADD EXPENSE ===================== -->
+        <template if:true={showAddExpenseModal}>
+            <section class="slds-modal slds-fade-in-open modal-visible" role="dialog">
+                <div class="slds-modal__container modal-wide">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-modal__title">Add Expense</h2>
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            class="slds-modal__close"
+                            variant="bare-inverse"
+                            alternative-text="Close"
+                            onclick={closeAddExpenseModal}
+                        ></lightning-button-icon>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input
+                                    label="Expense Name"
+                                    data-field="name"
+                                    value={newExpense.name}
+                                    onchange={handleExpenseField}
+                                    required
+                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2">
+                                <lightning-input
+                                    type="number"
+                                    step="0.01"
+                                    label="Amount"
+                                    data-field="amount"
+                                    value={newExpense.amount}
+                                    onchange={handleExpenseField}
+                                    required
+                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                <lightning-combobox
+                                    label="Category"
+                                    data-field="category"
+                                    value={newExpense.category}
+                                    options={categoryOptions}
+                                    onchange={handleExpenseField}
+                                ></lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                <lightning-input
+                                    type="date"
+                                    label="Expense Date"
+                                    data-field="date"
+                                    value={newExpense.date}
+                                    onchange={handleExpenseField}
+                                    required
+                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                <lightning-combobox
+                                    label="Paid By"
+                                    data-field="paidById"
+                                    value={newExpense.paidById}
+                                    options={payerOptions}
+                                    onchange={handleExpenseField}
+                                ></lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                <lightning-combobox
+                                    label="Split Type"
+                                    data-field="splitType"
+                                    value={newExpense.splitType}
+                                    options={splitOptions}
+                                    onchange={handleExpenseField}
+                                ></lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                                <lightning-checkbox-group
+                                    label="Split Between"
+                                    options={memberCheckboxOptions}
+                                    value={selectedShareMemberIds}
+                                    onchange={handleShareMembersChange}
+                                ></lightning-checkbox-group>
+                            </div>
+ 
+                            <template if:true={isCustomSplit}>
+                                <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                                    <div class="custom-split-box">
+                                        <template for:each={customShareRows} for:item="row">
+                                            <div key={row.id} class="custom-split-row">
+                                                <span class="custom-split-name">{row.name}</span>
+                                                <lightning-input
+                                                    type="number"
+                                                    step="0.01"
+                                                    variant="label-hidden"
+                                                    data-id={row.id}
+                                                    value={row.percentage}
+                                                    onchange={handleCustomPctChange}
+                                                ></lightning-input>
+                                                <span class="pct-sign">%</span>
+                                            </div>
+                                        </template>
+                                        <div class="custom-split-total">
+                                            Total: {customSplitTotalPct}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={closeAddExpenseModal}></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Save Expense"
+                            onclick={saveNewExpense}
+                            class="slds-m-left_x-small"
+                        ></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+ 
+        <!-- ===================== MODAL: EXPENSE DETAIL ===================== -->
+        <template if:true={showExpenseDetail}>
+            <section class="slds-modal slds-fade-in-open modal-visible" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-modal__title">{activeExpense.Name}</h2>
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            class="slds-modal__close"
+                            variant="bare-inverse"
+                            alternative-text="Close"
+                            onclick={closeExpenseDetail}
+                        ></lightning-button-icon>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <div class="detail-top">
+                            <div>
+                                <div class="detail-amount">{activeExpense.formattedAmount}</div>
+                                <div class="detail-meta">
+                                    {activeExpense.rajuser2003__Category__c} · Paid by {activeExpense.paidByName} ·
+                                    {activeExpense.rajuser2003__Expensesdate__c}
+                                </div>
+                            </div>
+                        </div>
+                        <h3 class="shares-title">Split Details</h3>
+                        <div class="share-list">
+                            <template for:each={activeExpenseShares} for:item="share">
+                                <div key={share.Id} class="share-row">
+                                    <span class="share-name">{share.memberName}</span>
+                                    <span class="share-amount">{share.formattedShare}</span>
+                                    <span
+                                        class={share.paidClass}
+                                        data-id={share.Id}
+                                        data-settlement={share.rajuser2003__Settlement_Picklist__c}
+                                        onclick={toggleShareSettled}
+                                    >
+                                        {share.settlementLabel}
+                                    </span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button
+                            variant="destructive"
+                            label="Delete Expense"
+                            onclick={handleDeleteExpense}
+                        ></lightning-button>
+                        <lightning-button
+                            variant="brand"
+                            label="Close"
+                            onclick={closeExpenseDetail}
+                            class="slds-m-left_x-small"
+                        ></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+    </div>
+</template>
