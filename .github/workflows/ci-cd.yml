@@ -77,4 +77,34 @@ jobs:
         run: |
           sf org display --target-org MyDevOrg
 
-      #
+      # =====================================================
+      # 8. Validate Deployment + RunLocalTests
+      # =====================================================
+      - name: Validate Salesforce Deployment
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org MyDevOrg \
+            --test-level RunLocalTests \
+            --wait 30 \
+            --dry-run
+
+      # =====================================================
+      # 9. Actual Deployment
+      # =====================================================
+      - name: Deploy to Salesforce
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org MyDevOrg \
+            --test-level RunLocalTests \
+            --wait 30
+
+      # =====================================================
+      # 10. Cleanup
+      # =====================================================
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f server.key
