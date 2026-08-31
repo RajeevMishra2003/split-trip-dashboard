@@ -1,0 +1,108 @@
+name: Salesforce LWC + Apex CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "force-app/main/default/lwc/**"
+      - "force-app/main/default/classes/**"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "force-app/main/default/lwc/**"
+      - "force-app/main/default/classes/**"
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # =========================================================
+      # 1. Checkout Repository
+      # =========================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # =========================================================
+      # 2. Setup Node.js
+      # =========================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # =========================================================
+      # 3. Install Salesforce CLI
+      # =========================================================
+      - name: Install Salesforce CLI
+        run: |
+          npm install --global @salesforce/cli
+
+      # =========================================================
+      # 4. Verify Salesforce CLI
+      # =========================================================
+      - name: Verify Salesforce CLI
+        run: |
+          sf --version
+
+      # =========================================================
+      # 5. Create JWT Private Key
+      # =========================================================
+      - name: Create JWT Key
+        run: |
+          echo "${{ secrets.SF_JWT_KEY }}" > server.key
+          chmod 600 server.key
+
+      # =========================================================
+      # 6. Authenticate Salesforce using JWT
+      # =========================================================
+      - name: Authenticate Salesforce
+        run: |
+          sf org login jwt \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --instance-url "https://login.salesforce.com" \
+            --alias MyDevOrg
+
+      # =========================================================
+      # 7. Verify Salesforce Authentication
+      # =========================================================
+      - name: Verify Salesforce Org
+        run: |
+          sf org display --target-org MyDevOrg
+
+      # =========================================================
+      # 8. Validate Deployment + Run Apex Tests
+      # =========================================================
+      - name: Validate Salesforce Deployment
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org MyDevOrg \
+            --test-level RunLocalTests \
+            --wait 30 \
+            --dry-run
+
+      # =========================================================
+      # 9. Deploy to Salesforce
+      # =========================================================
+      - name: Deploy to Salesforce
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org MyDevOrg \
+            --test-level RunLocalTests \
+            --wait 30
+
+      # =========================================================
+      # 10. Cleanup Private Key
+      # =========================================================
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f server.key
