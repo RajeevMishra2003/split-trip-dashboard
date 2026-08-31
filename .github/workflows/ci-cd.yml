@@ -17,17 +17,21 @@ on:
 
 jobs:
   test-and-deploy:
+    name: Test and Deploy
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       # =====================================================
-      # 1. Checkout Repository
+      # 1. Checkout
       # =====================================================
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       # =====================================================
-      # 2. Setup Node.js (v22 - required for latest Salesforce CLI)
+      # 2. Setup Node.js
       # =====================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,29 +43,42 @@ jobs:
       # =====================================================
       - name: Install Salesforce CLI
         run: |
-          npm install --global @salesforce/cli@latest
+          npm install --global @salesforce/cli
+          sf --version
 
       # =====================================================
-      # 4. Verify Salesforce CLI
+      # 4. Verify Runtime
       # =====================================================
-      - name: Verify Salesforce CLI
+      - name: Verify Runtime
         run: |
+          echo "Node:"
           node --version
+
+          echo "NPM:"
           npm --version
+
+          echo "Salesforce CLI:"
           sf --version
+
+          echo "Salesforce CLI path:"
+          which sf
 
       # =====================================================
       # 5. Create JWT Private Key
       # =====================================================
       - name: Create JWT Key
+        shell: bash
         run: |
           printf '%s\n' '${{ secrets.SF_JWT_KEY }}' > server.key
           chmod 600 server.key
 
+          echo "JWT key created successfully"
+
       # =====================================================
-      # 6. Authenticate Salesforce using JWT
+      # 6. Authenticate Salesforce
       # =====================================================
       - name: Authenticate Salesforce
+        shell: bash
         run: |
           sf org login jwt \
             --client-id "${{ secrets.SF_CONSUMER_KEY }}" \
@@ -71,14 +88,15 @@ jobs:
             --alias MyDevOrg
 
       # =====================================================
-      # 7. Verify Salesforce Authentication
+      # 7. Verify Salesforce Org
       # =====================================================
       - name: Verify Salesforce Org
         run: |
-          sf org display --target-org MyDevOrg
+          sf org display \
+            --target-org MyDevOrg
 
       # =====================================================
-      # 8. Validate Deployment + RunLocalTests
+      # 8. Validate + Run Local Tests
       # =====================================================
       - name: Validate Salesforce Deployment
         run: |
@@ -104,7 +122,7 @@ jobs:
       # =====================================================
       # 10. Cleanup
       # =====================================================
-      - name: Cleanup
+      - name: Cleanup JWT Key
         if: always()
         run: |
           rm -f server.key
