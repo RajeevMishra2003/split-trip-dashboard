@@ -24,59 +24,43 @@ jobs:
       contents: read
 
     steps:
-      # =====================================================
-      # 1. Checkout
-      # =====================================================
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # =====================================================
-      # 2. Setup Node.js
-      # =====================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      # =====================================================
-      # 3. Install Salesforce CLI
-      # =====================================================
+      - name: Verify Node.js
+        run: |
+          echo "Node version:"
+          node --version
+
+          echo "NPM version:"
+          npm --version
+
       - name: Install Salesforce CLI
         run: |
-          npm install --global @salesforce/cli
-          sf --version
+          npm install --global @salesforce/cli@latest
 
-      # =====================================================
-      # 4. Verify Runtime
-      # =====================================================
-      - name: Verify Runtime
+      - name: Verify Salesforce CLI
         run: |
           echo "Node:"
           node --version
 
-          echo "NPM:"
-          npm --version
-
           echo "Salesforce CLI:"
           sf --version
 
-          echo "Salesforce CLI path:"
+          echo "SF location:"
           which sf
 
-      # =====================================================
-      # 5. Create JWT Private Key
-      # =====================================================
       - name: Create JWT Key
         shell: bash
         run: |
           printf '%s\n' '${{ secrets.SF_JWT_KEY }}' > server.key
           chmod 600 server.key
 
-          echo "JWT key created successfully"
-
-      # =====================================================
-      # 6. Authenticate Salesforce
-      # =====================================================
       - name: Authenticate Salesforce
         shell: bash
         run: |
@@ -87,17 +71,11 @@ jobs:
             --instance-url "https://login.salesforce.com" \
             --alias MyDevOrg
 
-      # =====================================================
-      # 7. Verify Salesforce Org
-      # =====================================================
       - name: Verify Salesforce Org
         run: |
           sf org display \
             --target-org MyDevOrg
 
-      # =====================================================
-      # 8. Validate + Run Local Tests
-      # =====================================================
       - name: Validate Salesforce Deployment
         run: |
           sf project deploy start \
@@ -107,9 +85,6 @@ jobs:
             --wait 30 \
             --dry-run
 
-      # =====================================================
-      # 9. Actual Deployment
-      # =====================================================
       - name: Deploy to Salesforce
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -119,10 +94,7 @@ jobs:
             --test-level RunLocalTests \
             --wait 30
 
-      # =====================================================
-      # 10. Cleanup
-      # =====================================================
-      - name: Cleanup JWT Key
+      - name: Cleanup
         if: always()
         run: |
           rm -f server.key
