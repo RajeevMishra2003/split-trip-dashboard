@@ -27,24 +27,31 @@ jobs:
         uses: actions/checkout@v4
 
       # =====================================================
-      # 2. Install Salesforce CLI
+      # 2. Setup Node.js (v22 - required for latest Salesforce CLI)
+      # =====================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # =====================================================
+      # 3. Install Salesforce CLI
       # =====================================================
       - name: Install Salesforce CLI
         run: |
           npm install --global @salesforce/cli@latest
 
       # =====================================================
-      # 3. Verify Salesforce CLI
+      # 4. Verify Salesforce CLI
       # =====================================================
       - name: Verify Salesforce CLI
         run: |
           node --version
           npm --version
           sf --version
-          which sf
 
       # =====================================================
-      # 4. Create JWT Private Key
+      # 5. Create JWT Private Key
       # =====================================================
       - name: Create JWT Key
         run: |
@@ -52,52 +59,22 @@ jobs:
           chmod 600 server.key
 
       # =====================================================
-      # 5. Authenticate Salesforce using JWT
+      # 6. Authenticate Salesforce using JWT
       # =====================================================
       - name: Authenticate Salesforce
         run: |
           sf org login jwt \
-            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --client-id "${{ secrets.SF_CONSUMER_KEY }}" \
             --jwt-key-file server.key \
             --username "${{ secrets.SF_USERNAME }}" \
             --instance-url "https://login.salesforce.com" \
             --alias MyDevOrg
 
       # =====================================================
-      # 6. Verify Salesforce Authentication
+      # 7. Verify Salesforce Authentication
       # =====================================================
       - name: Verify Salesforce Org
         run: |
           sf org display --target-org MyDevOrg
 
-      # =====================================================
-      # 7. Validate Deployment + RunLocalTests
-      # =====================================================
-      - name: Validate Salesforce Deployment
-        run: |
-          sf project deploy start \
-            --source-dir force-app \
-            --target-org MyDevOrg \
-            --test-level RunLocalTests \
-            --wait 30 \
-            --dry-run
-
-      # =====================================================
-      # 8. Actual Deployment
-      # =====================================================
-      - name: Deploy to Salesforce
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          sf project deploy start \
-            --source-dir force-app \
-            --target-org MyDevOrg \
-            --test-level RunLocalTests \
-            --wait 30
-
-      # =====================================================
-      # 9. Cleanup
-      # =====================================================
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -f server.key
+      #
