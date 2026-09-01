@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Salesforce CLI
         run: |
-           npm install --global @salesforce/cli@2.130.0
+          npm install --global @salesforce/cli@2.130.0
 
       - name: Verify Salesforce CLI
         run: |
@@ -55,7 +55,7 @@ jobs:
           echo "SF location:"
           which sf
 
-            - name: Create JWT Key
+      - name: Create JWT Key
         shell: bash
         run: |
           echo "${{ secrets.SF_JWT_KEY }}" | base64 --decode > server.key
