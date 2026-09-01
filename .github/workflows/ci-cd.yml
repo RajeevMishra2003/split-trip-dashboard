@@ -15,6 +15,8 @@ on:
       - "force-app/main/default/lwc/**"
       - "force-app/main/default/classes/**"
 
+  workflow_dispatch:
+
 jobs:
   test-and-deploy:
     name: Test and Deploy
