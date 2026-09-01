@@ -55,10 +55,10 @@ jobs:
           echo "SF location:"
           which sf
 
-      - name: Create JWT Key
+            - name: Create JWT Key
         shell: bash
         run: |
-          printf '%s\n' '${{ secrets.SF_JWT_KEY }}' > server.key
+          echo "${{ secrets.SF_JWT_KEY }}" | base64 --decode > server.key
           chmod 600 server.key
 
       - name: Authenticate Salesforce
